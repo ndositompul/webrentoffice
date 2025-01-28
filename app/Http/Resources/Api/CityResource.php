@@ -21,7 +21,7 @@ class CityResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'photo' => $this->photo,
-            'officeSpaces_count' => $this->officeSpaces_count, //menghitung jumlah office yang ada di setiap kota cth: Medan terdapat 10 Office
+            'officeSpaces_count' => $this->office_spaces_count, //menghitung jumlah office yang ada di setiap kota cth: Medan terdapat 10 Office
             'officeSpaces' => OfficeSpaceResource::collection($this->whenLoaded('officeSpaces')),
         ];
     }
