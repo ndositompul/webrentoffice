@@ -12,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Twilio\Rest\Client;
+use Filament\Notifications\Notification;
 
 class BookingTransactionResource extends Resource
 {
@@ -93,6 +95,53 @@ class BookingTransactionResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                
+                Tables\Actions\Action::make('approve')
+                ->label('Approve')
+                ->action(function (BookingTransaction $record) {
+                    $record->is_paid = true;
+                    $record->save();
+
+                    //Trigger the custom notification
+                    Notification::make()
+                        ->title('Booking Approved')
+                        ->success()
+                        ->body('The booking has been successfully approve, ')
+                        ->send();
+
+                        //Find your account SID and Auth Token at twilio.com/console
+                        //and set the environment variables. 
+                        $sid = getenv("TWILIO_ACCOUNT_SID");
+                        $token = getenv("TWILIO_AUTH_TOKEN");
+                        $twilio = new Client($sid, $token);
+
+                        //Create the message with line breaks
+                        $messageBody = "Hi {$record->name}, pemesanan Anda dengan kode {$record->booking_trx_id} sudah terbayar penuh.\n\n";
+                        $messageBody .= "Silahkan datang kepada lokasi kantor {$record->officeSpace->name} untuk mulai
+                        menggunakan ruang kerja tersebut.\n\n";
+                        $messageBody .= "Jika Anda memiliki pertanyaan silahkan menghubungi CS kami di webrentoffice.com/contact-us.";
+
+                        //send with feature message SMS
+                        // $message = $twilio->messages->create(
+                        //     "+{$record->phone_number}", //to
+                        //     [
+                        //         "body" => $messageBody,
+                        //         "from" => getenv("TWILIO_PHONE_NUMBER")
+                        //     ]
+                        // );
+
+                        //send with feature message WhatsApp
+                        $message = $twilio->messages
+                        ->create("whatsapp:+{$record->phone_number}", // to
+                            array(
+                            "from" => "whatsapp:+14155238886",
+                            "body" => $messageBody,
+                            )
+                        );
+                })
+                ->color('success')
+                ->requiresConfirmation()
+                ->visible(fn (BookingTransaction $record) => !$record->is_paid),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
